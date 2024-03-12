@@ -406,3 +406,12 @@ log:
 	echo '#' RE2 basic search tests built by make $@ >re2-search.txt
 	echo '#' $$(date) >>re2-search.txt
 	obj/test/search_test |grep -v '^PASS$$' >>re2-search.txt
+
+.PHONY: orpheus
+orpheus:
+	@mkdir -p obj
+	@cp orpheus.cc obj/orpheus.cc
+	(cd obj && export PKG_CONFIG_PATH=$(DESTDIR)$(libdir)/pkgconfig:$(PKG_CONFIG_PATH); \
+	  $(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) \
+	  $$($(PKG_CONFIG) re2 --cflags) \
+	  $$($(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g' | sed -e 's/-lre2/-l:libre2.a/'))
