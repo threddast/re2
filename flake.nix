@@ -13,7 +13,7 @@
           nativeBuildInputs = [ pkg-config gnumake ];
           buildInputs = [ abseil-cpp gtest gbenchmark ];
           shellHook = ''
-            export PATH="$PWD/obj:$PATH"
+            export PATH="$PWD:$PATH"
           '';
         };
       });

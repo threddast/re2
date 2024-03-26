@@ -2,9 +2,10 @@
 #include <string>
 #include <vector>
 #include <re2/re2.h>
+#include "re2/regexp.h"
+
 
 using namespace std;
-using namespace re2;
 
 // adapted from https://stackoverflow.com/questions/25889065/how-to-use-re2-library-when-match-arguments-are-unknown
 
@@ -19,6 +20,9 @@ int main(int argc, char* argv[]) {
     string text = argv[2];
 
     RE2 re(regex);
+    re2::Regexp *inside_regex = re.Regexp();
+    string str = inside_regex->Dump();
+    printf("%s\n", str.c_str());
 
     if (!re.ok()) {
         printf("Failed to compile regular expression.\n");

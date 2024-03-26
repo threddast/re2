@@ -409,9 +409,10 @@ log:
 
 .PHONY: orpheus
 orpheus:
-	@mkdir -p obj
-	@cp orpheus.cc obj/orpheus.cc
-	(cd obj && export PKG_CONFIG_PATH=$(DESTDIR)$(libdir)/pkgconfig:$(PKG_CONFIG_PATH); \
-	  $(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) \
-	  $$($(PKG_CONFIG) re2 --cflags) \
-	  $$($(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g' | sed -e 's/-lre2/-l:libre2.a/'))
+	export PKG_CONFIG_PATH=$(DESTDIR)$(libdir)/pkgconfig:$(PKG_CONFIG_PATH); \
+	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) $(TESTOFILES) -lgtest -lgtest_main -I $(PWD) \
+	`$(PKG_CONFIG) re2 --cflags` \
+	`$(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g' | sed -e 's/-lre2/-l:libre2.a/'`
+
+.PHONY: mine
+mine: all install $(SOFILES) orpheus
