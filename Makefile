@@ -36,7 +36,7 @@ LDABSL=$(shell $(PKG_CONFIG) $(ABSL_DEPS) --libs | sed -e 's/-Wl / /g')
 
 CXX?=g++
 # can override
-CXXFLAGS?=-O3 -g
+CXXFLAGS?=-O1 -g
 LDFLAGS?=
 # required
 RE2_CXXFLAGS?=-pthread -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -I. $(CCABSL) $(CCICU) $(CCPCRE)
@@ -48,7 +48,7 @@ NMFLAGS?=-p
 
 # Variables mandated by GNU, the arbiter of all good taste on the internet.
 # http://www.gnu.org/prep/standards/standards.html
-prefix=/usr/local
+prefix=bin
 exec_prefix=$(prefix)
 includedir=$(prefix)/include
 libdir=$(exec_prefix)/lib
@@ -401,7 +401,7 @@ log:
 .PHONY: orpheus
 orpheus:
 	export PKG_CONFIG_PATH=$(DESTDIR)$(libdir)/pkgconfig:$(PKG_CONFIG_PATH); \
-	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) $(TESTOFILES) -lgtest -lgtest_main -I $(PWD) \
+	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) -lgtest -lgtest_main -I $(PWD) \
 	`$(PKG_CONFIG) re2 --cflags` \
 	`$(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g' | sed -e 's/-lre2/-l:libre2.a/'`
 

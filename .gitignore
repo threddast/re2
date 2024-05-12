@@ -5,3 +5,5 @@ obj/
 benchlog.*
 user.bazelrc
 orpheus
+bin/
+.vscode/
