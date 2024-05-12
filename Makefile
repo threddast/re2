@@ -67,7 +67,7 @@ INSTALL_DATA=$(INSTALL) -m 644
 
 # Work around the weirdness of sed(1) on Darwin. :/
 ifeq ($(shell uname),Darwin)
-SED_INPLACE=sed -i ''
+SED_INPLACE=sed -i
 else ifeq ($(shell uname),SunOS)
 SED_INPLACE=sed -i
 else
@@ -410,9 +410,9 @@ log:
 .PHONY: orpheus
 orpheus:
 	export PKG_CONFIG_PATH=$(DESTDIR)$(libdir)/pkgconfig:$(PKG_CONFIG_PATH); \
-	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) -lgtest -lgtest_main -I $(PWD) \
+	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) -I $(PWD) \
 	`$(PKG_CONFIG) re2 --cflags` \
-	`$(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g' | sed -e 's/-lre2/-l:libre2.a/'`
+	`$(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g'`
 
 .PHONY: mine
 mine: all install $(SOFILES) orpheus
