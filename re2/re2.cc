@@ -321,6 +321,10 @@ int RE2::ProgramSize() const {
   return prog_->size();
 }
 
+Prog* RE2::GetProg() const {
+  return prog_;
+}
+
 int RE2::ReverseProgramSize() const {
   if (prog_ == NULL)
     return -1;

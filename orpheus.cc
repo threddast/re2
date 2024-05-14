@@ -1,28 +1,36 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <re2/re2.h>
+#include "re2/re2.h"
+#include "re2/prog.h"
 #include "re2/regexp.h"
 
 
 using namespace std;
+using namespace re2;
 
 // adapted from https://stackoverflow.com/questions/25889065/how-to-use-re2-library-when-match-arguments-are-unknown
 
 int main(int argc, char* argv[]) {
-    // Check for the correct number of arguments
-    if (argc != 3) {
-        cerr << "Usage: " << argv[0] << " <regex> <text>" << endl;
-        return 1;
+    string regex = "(?<=test)";
+    string text = "test";
+    if (argc == 3) {
+        regex = string(argv[1]);
+        text = argv[2];
     }
 
-    string regex = string(argv[1]);
-    string text = argv[2];
+    // parse regex
+    RegexpStatus status;
+    Regexp::ParseFlags flags;
+    Regexp* parsed = Regexp::Parse(regex, flags, &status);
+    printf("Parsed regex: \n\t%s\n", parsed->Dump().c_str());
 
-    RE2 re(regex);
-    re2::Regexp *inside_regex = re.Regexp();
-    string str = inside_regex->Dump();
-    printf("%s\n", str.c_str());
+    // compile regex for matching
+    RE2 re(regex); // calls RE2::Init() internally
+
+    // dump prog of regex
+    Prog* prog = re.GetProg();
+    printf("Dump of regex: \n%s\n", prog->Dump().c_str());
 
     if (!re.ok()) {
         printf("Failed to compile regular expression.\n");
@@ -45,12 +53,12 @@ int main(int argc, char* argv[]) {
     }
 
     if (RE2::FullMatchN(text, re, arguments_ptrs.data(), args_count)) {
-        printf("True\n");
+        printf("Match!\n");
         for (size_t i = 0; i < args_count; i++) {
-            printf("Group %zu: %s\n", i+1, results[i].c_str());
+            printf("\tGroup %zu: %s\n", i+1, results[i].c_str());
         }
     } else {
-        printf("False\n");
+        printf("No match\n");
     }
 
     return 0;

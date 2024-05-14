@@ -614,6 +614,7 @@ class RE2 {
                const absl::string_view* vec,
                int veclen) const;
 
+  Prog* GetProg() const;
   // Constructor options
   class Options {
    public:

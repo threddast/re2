@@ -75,6 +75,8 @@ bool Regexp::ComputeSimple() {
         return !ccb_->empty() && !ccb_->full();
       return !cc_->empty() && !cc_->full();
     case kRegexpCapture:
+    case kRegexpPLB:
+    case kRegexpNLB:
       subs = sub();
       return subs[0]->simple();
     case kRegexpStar:
@@ -486,7 +488,9 @@ Regexp* SimplifyWalker::PostVisit(Regexp* re,
       // All these are always simple.
       re->simple_ = true;
       return re->Incref();
-
+      
+    case kRegexpNLB:
+    case kRegexpPLB:
     case kRegexpConcat:
     case kRegexpAlternate: {
       // These are simple as long as the subpieces are simple.

@@ -178,6 +178,8 @@ bool EmptyStringWalker::PostVisit(Regexp* re, bool parent_arg, bool pre_arg,
       return false;
 
     case kRegexpPlus:                  // can be empty if the child can
+    case kRegexpPLB:
+    case kRegexpNLB:
     case kRegexpCapture:
       return child_args[0];
 

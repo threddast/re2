@@ -8,3 +8,5 @@ orpheus
 bin/
 .vscode/
 .direnv/
+orpheus.dSYM/
+db.transit.json

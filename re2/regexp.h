@@ -134,6 +134,9 @@ enum RegexpOp {
   // Optionally, capturing name is name_.
   kRegexpCapture,
 
+  kRegexpPLB,
+  kRegexpNLB,
+
   // Matches any character.
   kRegexpAnyChar,
 
@@ -354,6 +357,10 @@ class Regexp {
     ABSL_DCHECK_EQ(op_, kRegexpCapture);
     return cap_;
   }
+  int lb_id() { 
+    ABSL_DCHECK(op_ == kRegexpPLB || op_ == kRegexpNLB); 
+    return lb_id_; 
+  }
   const std::string* name() {
     ABSL_DCHECK_EQ(op_, kRegexpCapture);
     return name_;
@@ -370,6 +377,7 @@ class Regexp {
     ABSL_DCHECK_EQ(op_, kRegexpHaveMatch);
     return match_id_;
   }
+
 
   // Increments reference count, returns object as convenience.
   Regexp* Incref();
@@ -605,6 +613,7 @@ class Regexp {
     };
     struct {  // Capture
       int cap_;
+      int lb_id_;
       std::string* name_;
     };
     struct {  // LiteralString

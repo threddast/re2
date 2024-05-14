@@ -628,7 +628,9 @@ Prefilter::Info* Prefilter::Info::Walker::PostVisit(
     case kRegexpCharClass:
       info = CClass(re->cc(), latin1());
       break;
-
+      
+    case kRegexpPLB:
+    case kRegexpNLB:
     case kRegexpCapture:
       // These don't affect the set of matching strings.
       info = child_args[0];

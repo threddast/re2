@@ -410,7 +410,7 @@ log:
 .PHONY: orpheus
 orpheus:
 	export PKG_CONFIG_PATH=$(DESTDIR)$(libdir)/pkgconfig:$(PKG_CONFIG_PATH); \
-	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) -I $(PWD) \
+	$(CXX) orpheus.cc -o orpheus $(CXXFLAGS) $(LDFLAGS) -lgtest -lgtest_main -I $(PWD) $(OFILES) $(TESTOFILES) \
 	`$(PKG_CONFIG) re2 --cflags` \
 	`$(PKG_CONFIG) re2 --libs | sed -e 's/-Wl / /g'`
 

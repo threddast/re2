@@ -10,7 +10,7 @@
     flake-utils.lib.eachDefaultSystem (system:
       with import nixpkgs { inherit system; }; {
         devShells.default = mkShell {
-          nativeBuildInputs = [ pkg-config gnumake ];
+          nativeBuildInputs = [ pkg-config gnumake llvm clang ];
           buildInputs = [ abseil-cpp gtest gbenchmark ];
           shellHook = ''
             export PATH="$PWD:$PATH"
