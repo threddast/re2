@@ -30,7 +30,8 @@ int main(int argc, char* argv[]) {
 
     // dump prog of regex
     Prog* prog = re.GetProg();
-    printf("Dump of regex: \n%s\n", prog->Dump().c_str());
+    printf("Dump of regex: \n%s\n", prog->MyDump().c_str());
+
 
     if (!re.ok()) {
         printf("Failed to compile regular expression.\n");

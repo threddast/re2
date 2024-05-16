@@ -56,6 +56,19 @@ void Prog::Inst::InitCapture(int cap, uint32_t out) {
   cap_ = cap;
 }
 
+void Prog::Inst::InitLBWrite(int lb, uint32_t out) {
+  ABSL_DCHECK_EQ(out_opcode_, 0);
+  set_out_opcode(out, kInstLBWrite);
+  lb_ = lb;
+}
+
+void Prog::Inst::InitLBCheck(int lb, uint32_t lb_automaton, uint32_t out) {
+  ABSL_DCHECK_EQ(out_opcode_, 0);
+  set_out_opcode(out, kInstLBCheck);
+  lb_ = lb;
+  out1_ = lb_automaton;
+}
+
 void Prog::Inst::InitEmptyWidth(EmptyOp empty, uint32_t out) {
   ABSL_DCHECK_EQ(out_opcode_, uint32_t{0});
   set_out_opcode(out, kInstEmptyWidth);
@@ -97,6 +110,12 @@ std::string Prog::Inst::Dump() {
     case kInstCapture:
       return absl::StrFormat("capture %d -> %d", cap_, out());
 
+    case kInstLBWrite:
+      return absl::StrFormat("lbwrite %d", lb_);
+
+    case kInstLBCheck:
+      return absl::StrFormat("lbcheck %d -> %d", lb_, out());
+
     case kInstEmptyWidth:
       return absl::StrFormat("emptywidth %#x -> %d",
                              static_cast<int>(empty_), out());
@@ -118,6 +137,7 @@ Prog::Prog()
     reversed_(false),
     did_flatten_(false),
     did_onepass_(false),
+    has_lookbehind_(false), // probably should be set in the flatten function
     start_(0),
     start_unanchored_(0),
     size_(0),
@@ -179,6 +199,23 @@ std::string Prog::Dump() {
   return ProgToString(this, &q);
 }
 
+std::string Prog::MyDump() {
+  std::string result;
+
+  // while (this->lb_starts.size() > 0) {
+  //   int idx = this->lb_starts.back();
+  //   printf("idx: %d\n", idx);
+  //   this->lb_starts.pop_back();
+  // }
+
+  for (const auto& element : this->lb_starts) {
+    result += std::to_string(element) + " ";
+  }
+  printf("lb_starts: %s\n", result.c_str());
+
+  return FlattenedProgToString(this, start_);
+}
+
 std::string Prog::DumpUnanchored() {
   if (did_flatten_)
     return FlattenedProgToString(this, start_unanchored_);
@@ -214,6 +251,8 @@ static bool IsMatch(Prog* prog, Prog::Inst* ip) {
       case kInstByteRange:
       case kInstFail:
       case kInstEmptyWidth:
+      case kInstLBWrite:
+      case kInstLBCheck:
         return false;
 
       case kInstCapture:
@@ -616,7 +655,20 @@ void Prog::Flatten() {
     if (ip->opcode() != kInstAltMatch)  // handled in EmitList()
       ip->set_out(flatmap[ip->out()]);
     inst_count_[ip->opcode()]++;
+    if (ip->opcode() == kInstLBCheck) {
+      lb_add_start(flatmap[ip->out1()]);
+      // lb_add_start(id+1); // kinda ugly, but basically the nop is always after the checkLB
+    }
   }
+
+  // Fifth pass: add lookbehind starts
+  // if (has_lookbehind_) {
+  //   for (int id = 0; id < static_cast<int>(flat.size()); id++) {
+  //     Inst* ip = &flat[id];
+  //     if (ip->opcode() == kInstLBCheck)
+  //       lb_add_start(ip->out1());
+  //   }
+  // }
 
 #if !defined(NDEBUG)
   // Address a `-Wunused-but-set-variable' warning from Clang 13.x.
@@ -662,6 +714,9 @@ void Prog::MarkSuccessors(SparseArray<int>* rootmap,
                           SparseArray<int>* predmap,
                           std::vector<std::vector<int>>* predvec,
                           SparseSet* reachable, std::vector<int>* stk) {
+  // this function here is a problem for us because it
+  // throws away unreacheable states. IDEA: the checkLB instruction should point to the start of the writeLB tree
+
   // Mark the kInstFail instruction.
   rootmap->set_new(0, rootmap->size());
 
@@ -711,12 +766,30 @@ void Prog::MarkSuccessors(SparseArray<int>* rootmap,
         id = ip->out();
         goto Loop;
 
+      case kInstLBCheck:
+        set_lookbehind();
+        // mark this as a root
+        if (!rootmap->has_index(ip->out()))
+          rootmap->set_new(ip->out(), rootmap->size());
+        // mark the writeLB as a root
+        if (!rootmap->has_index(ip->out1()))
+          rootmap->set_new(ip->out1(), rootmap->size());
+        stk->push_back(ip->out1());
+        id = ip->out();
+
+        // save the lb_start
+        // lb_add_start(ip->out1());
+        // printf("lb_start_marksucc: %d\n", ip->out1());
+        goto Loop;
+
+
       case kInstNop:
         id = ip->out();
         goto Loop;
 
       case kInstMatch:
       case kInstFail:
+      case kInstLBWrite:
         break;
     }
   }
@@ -748,6 +821,7 @@ void Prog::MarkDominator(int root, SparseArray<int>* rootmap,
         ABSL_LOG(DFATAL) << "unhandled opcode: " << ip->opcode();
         break;
 
+      case kInstLBCheck:
       case kInstAltMatch:
       case kInstAlt:
         stk->push_back(ip->out1());
@@ -765,6 +839,7 @@ void Prog::MarkDominator(int root, SparseArray<int>* rootmap,
 
       case kInstMatch:
       case kInstFail:
+      case kInstLBWrite:
         break;
     }
   }
@@ -804,7 +879,7 @@ void Prog::EmitList(int root, SparseArray<int>* rootmap,
       // We reached another "tree" via epsilon transition. Emit a kInstNop
       // instruction so that the Prog does not become quadratically larger.
       flat->emplace_back();
-      flat->back().set_opcode(kInstNop);
+      flat->back().set_opcode(kInstNop); // this adds a nop at the start
       flat->back().set_out(rootmap->get_existing(id));
       continue;
     }
@@ -830,15 +905,56 @@ void Prog::EmitList(int root, SparseArray<int>* rootmap,
       case kInstByteRange:
       case kInstCapture:
       case kInstEmptyWidth:
+      // case kInstLBCheck:
         flat->emplace_back();
         memmove(&flat->back(), ip, sizeof *ip);
         flat->back().set_out(rootmap->get_existing(ip->out()));
         break;
 
+      case kInstLBCheck:
+      // original solution
+        flat->emplace_back();
+        memmove(&flat->back(), ip, sizeof *ip);
+        flat->back().set_out(rootmap->get_existing(ip->out()));
+        flat->back().out1_ = rootmap->get_existing(ip->out1());
+        break;
+
+      // new solution 2
+        flat->emplace_back();
+        memmove(&flat->back(), ip, sizeof *ip);
+        flat->back().set_out(rootmap->get_existing(ip->out()));
+        flat->back().set_out1(rootmap->get_existing(ip->out1()));
+        // stk->push_back(ip->out1());
+        // id = ip->out1();
+        // goto Loop;
+        break;
+
+      // new solution
+        flat->emplace_back();
+        memmove(&flat->back(), ip, sizeof *ip);
+        flat->back().set_out(rootmap->get_existing(ip->out())); // checklb points to normal tree
+        // int out1_id = rootmap->get_existing(ip->out1());
+        flat->back().set_out1(static_cast<int>(flat->size())); // set out1 to the nop
+
+              
+        flat->emplace_back();
+        flat->back().set_opcode(kInstNop); // this adds a nop at the start
+        flat->back().set_out(rootmap->get_existing(ip->out1()));
+        // flat->at(flat->size() - 2).out1_ = 1;
+        break;
+
+        stk->push_back(ip->out1());
+        id = ip->out1();
+        goto Loop;
+        break;
+
+      // case kInstLBCheck:
+        // printf("hello\n");
       case kInstNop:
         id = ip->out();
         goto Loop;
 
+      case kInstLBWrite:
       case kInstMatch:
       case kInstFail:
         flat->emplace_back();

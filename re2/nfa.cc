@@ -255,7 +255,16 @@ void NFA::AddToThreadq(Threadq* q, int id0, int c, absl::string_view context,
       a = {id+1, NULL};
       goto Loop;
 
+    case kInstLBWrite:
+      printf("WRITE %d\n", ip->lb());
+      break;
+
+    case kInstLBCheck:
+      printf("CHECK %d\n", ip->lb());
+      break;
+
     case kInstNop:
+      printf("NOP: %d\n", id);
       if (!ip->last())
         stk[nstk++] = {id+1, NULL};
 
@@ -581,6 +590,19 @@ bool NFA::Search(absl::string_view text, absl::string_view context,
         if (p == NULL)
           p = etext_;
       }
+
+      // instead of starting a new thread, start them for all lbs positions
+      for (int i=0; i<prog_->lb_starts.size(); i++) {
+        printf("Starting thread at %d\n", prog_->lb_starts[i]);
+        Thread* t = AllocThread();
+        CopyCapture(t->capture, match_);
+        t->capture[0] = p;
+        AddToThreadq(runq, prog_->lb_starts[i], p < etext_ ? p[0] & 0xFF : -1, context, p,
+                      t);
+        Decref(t);
+      }
+
+      printf("official start: %d\n", start_);
 
       Thread* t = AllocThread();
       CopyCapture(t->capture, match_);

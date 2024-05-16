@@ -275,7 +275,7 @@ void RE2::Init(absl::string_view pattern, const Options& options) {
   // machine's memory gets cut from the DFA memory budget,
   // and that is harder to do if the DFA has already
   // been built.
-  is_one_pass_ = prog_->IsOnePass();
+  // is_one_pass_ = prog_->IsOnePass();
 }
 
 // Returns rprog_, computing it if needed.
@@ -739,6 +739,14 @@ bool RE2::Match(absl::string_view text,
 #endif
   bool dfa_failed = false;
   bool skipped_test = false;
+
+  // if a lookaround, directly use NFA and exit
+  if (prog_->has_lookbehind()) {
+    can_bit_state = false;
+    can_one_pass = false;
+    goto nfa; // also skips building the reverse prog
+  }
+  
   switch (re_anchor) {
     default:
       ABSL_LOG(DFATAL) << "Unexpected re_anchor value: " << re_anchor;
@@ -862,6 +870,9 @@ bool RE2::Match(absl::string_view text,
       break;
   }
 
+  nfa:
+  skipped_test = true;
+
   if (!skipped_test && ncap <= 1) {
     // We know exactly where it matches.  That's enough.
     if (ncap == 1)
@@ -883,11 +894,13 @@ bool RE2::Match(absl::string_view text,
 
     if (can_one_pass && anchor != Prog::kUnanchored) {
       if (!prog_->SearchOnePass(subtext1, text, anchor, kind, submatch, ncap)) {
+        printf("ONE PASS\n");
         if (!skipped_test && options_.log_errors())
           ABSL_LOG(ERROR) << "SearchOnePass inconsistency";
         return false;
       }
     } else if (can_bit_state && subtext1.size() <= bit_state_text_max_size) {
+      printf("BIT STATE\n");
       if (!prog_->SearchBitState(subtext1, text, anchor,
                                  kind, submatch, ncap)) {
         if (!skipped_test && options_.log_errors())

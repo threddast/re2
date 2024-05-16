@@ -655,13 +655,13 @@ bool Regexp::ParseState::DoLeftParenNoCapture() {
 
 bool Regexp::ParseState::DoPosLookBehind() {
   Regexp* re = new Regexp(kLeftParen, flags_);
-  re->lb_id_ = ++nlb_;
+  re->lb_ = ++nlb_;
   return PushRegexp(re);
 }
 
 bool Regexp::ParseState::DoNegLookBehind() {
   Regexp* re = new Regexp(kLeftParen, flags_);
-  re->lb_id_ = -(++nlb_);
+  re->lb_ = -(++nlb_);
   return PushRegexp(re);
 }
 
@@ -741,15 +741,14 @@ bool Regexp::ParseState::DoRightParen() {
   flags_ = re->parse_flags();
 
   // Handle lookbehinds
-  if (re->lb_id_ != 0) {
+  if (re->lb_ != 0) {
     // Rewrite LeftParen as lookbehind if needed.
-    if (re->lb_id_ > 0) {
+    if (re->lb_ > 0) {
       re->op_ = kRegexpPLB;
       re->AllocSub(1);
       re->sub()[0] = FinishRegexp(r1);
       re->simple_ = re->ComputeSimple();
     } else {
-      re->lb_id_ = -re->lb_id_;
       re->op_ = kRegexpNLB;
       re->AllocSub(1);
       re->sub()[0] = FinishRegexp(r1);

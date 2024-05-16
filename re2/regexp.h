@@ -357,9 +357,9 @@ class Regexp {
     ABSL_DCHECK_EQ(op_, kRegexpCapture);
     return cap_;
   }
-  int lb_id() { 
+  int lb() { 
     ABSL_DCHECK(op_ == kRegexpPLB || op_ == kRegexpNLB); 
-    return lb_id_; 
+    return lb_; 
   }
   const std::string* name() {
     ABSL_DCHECK_EQ(op_, kRegexpCapture);
@@ -377,7 +377,6 @@ class Regexp {
     ABSL_DCHECK_EQ(op_, kRegexpHaveMatch);
     return match_id_;
   }
-
 
   // Increments reference count, returns object as convenience.
   Regexp* Incref();
@@ -611,9 +610,9 @@ class Regexp {
       int max_;
       int min_;
     };
-    struct {  // Capture
+    struct {  // Capture or lookbehind
       int cap_;
-      int lb_id_;
+      int lb_;
       std::string* name_;
     };
     struct {  // LiteralString

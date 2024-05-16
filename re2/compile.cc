@@ -132,6 +132,7 @@ class Compiler : public Regexp::Walker<Frag> {
 
   // Given fragment a, returns (a) capturing as \n.
   Frag Capture(Frag a, int n);
+  Frag LookBehind(Frag a, int lb);
 
   // Given fragments a and b, returns ab; a|b
   Frag Cat(Frag a, Frag b);
@@ -428,11 +429,43 @@ Frag Compiler::Capture(Frag a, int n) {
   int id = AllocInst(2);
   if (id < 0)
     return NoMatch();
-  inst_[id].InitCapture(2*n, a.begin);
-  inst_[id+1].InitCapture(2*n+1, 0);
-  PatchList::Patch(inst_.data(), a.end, id+1);
+  inst_[id].InitCapture(2*n, a.begin); // left paren
+  inst_[id+1].InitCapture(2*n+1, 0);  // right paren
+  PatchList::Patch(inst_.data(), a.end, id+1); // patch end of a to right paren
 
   return Frag(id, PatchList::Mk((id+1) << 1), a.nullable);
+}
+
+// Frag Compiler::Match(int32_t match_id) {
+//   int id = AllocInst(1);
+//   if (id < 0)
+//     return NoMatch();
+//   inst_[id].InitMatch(match_id);
+//   return Frag(id, kNullPatchList, false);
+// }
+
+// Given a fragment a, returns a fragment with capturing parens around a.
+Frag Compiler::LookBehind(Frag a, int lb) {
+  // if (IsNoMatch(a))
+  //   return NoMatch();
+  int id = AllocInst(2);
+  if (id < 0)
+    return NoMatch();
+  inst_[id].InitLBWrite(lb, 0); // lb check instruction, goes to the main automaton
+
+  Frag lb_automaton = Cat(DotStar(), a); // this is the automaton that will be used to check the lookbehind
+  PatchList::Patch(inst_.data(), lb_automaton.end, id); // patch end of a with lb write
+
+  inst_[id+1].InitLBCheck(lb, lb_automaton.begin, 0); // lb write instruction, goes to the LB automaton
+
+  return Frag (id+1, PatchList::Mk((id+1) << 1), false);
+  // return Frag(this_frag.begin, this_frag.end, false);
+
+  // return Cat(lb_automaton, this_frag); // this add alternation which we don't want
+
+  // IDEA: probably here the problem is that the print function does not print unreacheable states
+  // this should not be a problem since every state has an index anyway
+  // I should just somehow save the index of the start of the lookbehind, like in an array
 }
 
 // A Rune is a name for a Unicode code point.
@@ -953,6 +986,11 @@ Frag Compiler::PostVisit(Regexp* re, Frag, Frag, Frag* child_frags,
       return EndRange();
     }
 
+    case kRegexpPLB: 
+      return LookBehind(child_frags[0], re->lb());
+    case kRegexpNLB:
+      return LookBehind(child_frags[0], re->lb());
+
     case kRegexpCapture:
       // If this is a non-capturing parenthesis -- (?:foo) --
       // just use the inner expression.
@@ -1013,6 +1051,8 @@ static bool IsAnchorStart(Regexp** pre, int depth) {
         sub->Decref();
       }
       break;
+    // case kRegexpPLB:  // @eg TODO: understand what this does, but not necessary for working
+    // case kRegexpNLB:
     case kRegexpCapture:
       sub = re->sub()[0]->Incref();
       if (IsAnchorStart(&sub, depth+1)) {
@@ -1060,6 +1100,8 @@ static bool IsAnchorEnd(Regexp** pre, int depth) {
         sub->Decref();
       }
       break;
+    // case kRegexpPLB:  // @eg TODO: same as other function, not strictly necessary
+    // case kRegexpNLB:
     case kRegexpCapture:
       sub = re->sub()[0]->Incref();
       if (IsAnchorEnd(&sub, depth+1)) {
