@@ -51,6 +51,9 @@ class NFA {
   NFA(Prog* prog);
   ~NFA();
 
+  // add lb_table vector of ints to store all the lb starts
+  std::vector<const char *> lb_table;
+
   // Searches for a matching string.
   //   * If anchored is true, only considers matches starting at offset.
   //     Otherwise finds lefmost match at or after offset.
@@ -133,6 +136,7 @@ class NFA {
 
 NFA::NFA(Prog* prog) {
   prog_ = prog;
+  lb_table = std::vector<const char*>(prog->lb_starts.size());
   start_ = prog_->start();
   ncapture_ = 0;
   longest_ = false;
@@ -255,16 +259,38 @@ void NFA::AddToThreadq(Threadq* q, int id0, int c, absl::string_view context,
       a = {id+1, NULL};
       goto Loop;
 
+    // both need to be handled here because they are 0-width instructions
     case kInstLBWrite:
-      printf("WRITE %d\n", ip->lb());
+            // Save state; will pick up at next byte.
+      // t = Incref(t0);
+      // *tp = t;
+      // break;
+      // printf("lb_table[%d] before write = %c\n", std::abs(ip->lb()), lb_table[std::abs(ip->lb())][0]);
+      // printf("WRITE %d %c\n", ip->lb(), p[0]);
+      lb_table[std::abs(ip->lb())] = p;
+      // printf("lb_table[%d] after write = %c\n", std::abs(ip->lb()), lb_table[std::abs(ip->lb())][0]);
       break;
 
     case kInstLBCheck:
-      printf("CHECK %d\n", ip->lb());
-      break;
+      // printf("CHECK %d %c\n", ip->lb(), p[0]);
+      // printf("lb_table[%d] check = %c\n", ip->lb(), lb_table[std::abs(ip->lb())][0]);
+      if (ip->lb() > 0) { //positive lb
+        if (!(lb_table[ip->lb()] == &p[0])) {
+          break; // fail
+        }
+      } else { // nlb
+        if (!(lb_table[-ip->lb()] != &p[0])) {
+          break; // fail
+        }
+      }
+      
+      // if (!(lb_table[std::abs(ip->lb())] == &p[0])) {
+      //   break; // fail
+      // }
+      // continue like a NOP
 
     case kInstNop:
-      printf("NOP: %d\n", id);
+      // printf("NOP: %d\n", id);
       if (!ip->last())
         stk[nstk++] = {id+1, NULL};
 
@@ -341,7 +367,7 @@ void NFA::AddToThreadq(Threadq* q, int id0, int c, absl::string_view context,
 int NFA::Step(Threadq* runq, Threadq* nextq, int c, absl::string_view context,
               const char* p) {
   nextq->clear();
-
+  // printf("Step %c\n", c);
   for (Threadq::iterator i = runq->begin(); i != runq->end(); ++i) {
     Thread* t = i->value();
     if (t == NULL)
@@ -363,6 +389,10 @@ int NFA::Step(Threadq* runq, Threadq* nextq, int c, absl::string_view context,
         // Should only see the values handled below.
         ABSL_LOG(DFATAL) << "Unhandled " << ip->opcode() << " in step";
         break;
+      // case kInstLBWrite:
+        // printf("WRITE %d\n", ip->lb());
+        // Decref(t);
+        // break;
 
       case kInstByteRange:
         AddToThreadq(nextq, ip->out(), c, context, p, t);
@@ -567,6 +597,9 @@ bool NFA::Search(absl::string_view text, absl::string_view context,
             match_[1] = p;
             matched_ = true;
             break;
+          // case kInstLBWrite:
+          //   printf("WRITE %d\n", ip->lb());
+          //   break;
         }
         break;
       }
@@ -591,9 +624,9 @@ bool NFA::Search(absl::string_view text, absl::string_view context,
           p = etext_;
       }
 
-      // instead of starting a new thread, start them for all lbs positions
+      //  start threads for all lbs positions
       for (int i=0; i<prog_->lb_starts.size(); i++) {
-        printf("Starting thread at %d\n", prog_->lb_starts[i]);
+        // printf("Starting thread at %d, char %c\n", prog_->lb_starts[i], p < etext_ ? p[0] & 0xFF : -1);
         Thread* t = AllocThread();
         CopyCapture(t->capture, match_);
         t->capture[0] = p;
@@ -601,8 +634,6 @@ bool NFA::Search(absl::string_view text, absl::string_view context,
                       t);
         Decref(t);
       }
-
-      printf("official start: %d\n", start_);
 
       Thread* t = AllocThread();
       CopyCapture(t->capture, match_);
