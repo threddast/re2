@@ -742,9 +742,15 @@ bool RE2::Match(absl::string_view text,
 
   // if a lookaround, directly use NFA and exit
   if (prog_->has_lookbehind()) {
+  // if (true) {
     can_bit_state = false;
     can_one_pass = false;
     goto nfa; // also skips building the reverse prog
+
+    // could transform this into "has lookaround"
+    // then run the NFA once for prog_ then for reverse prog
+    // both prog and reverse prog save a lookaround oracle with where the lookaround holds
+    // then run the NFA once more with the normal regex and the oracle
   }
   
   switch (re_anchor) {
@@ -894,13 +900,11 @@ bool RE2::Match(absl::string_view text,
 
     if (can_one_pass && anchor != Prog::kUnanchored) {
       if (!prog_->SearchOnePass(subtext1, text, anchor, kind, submatch, ncap)) {
-        printf("ONE PASS\n");
         if (!skipped_test && options_.log_errors())
           ABSL_LOG(ERROR) << "SearchOnePass inconsistency";
         return false;
       }
     } else if (can_bit_state && subtext1.size() <= bit_state_text_max_size) {
-      printf("BIT STATE\n");
       if (!prog_->SearchBitState(subtext1, text, anchor,
                                  kind, submatch, ncap)) {
         if (!skipped_test && options_.log_errors())

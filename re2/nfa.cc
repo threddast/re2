@@ -137,6 +137,7 @@ class NFA {
 NFA::NFA(Prog* prog) {
   prog_ = prog;
   lb_table = std::vector<const char*>(prog->lb_starts.size());
+  // add a table 
   start_ = prog_->start();
   ncapture_ = 0;
   longest_ = false;
@@ -148,6 +149,7 @@ NFA::NFA(Prog* prog) {
   // See NFA::AddToThreadq() for why this is so.
   int nstack = 2*prog_->inst_count(kInstCapture) +
                prog_->inst_count(kInstEmptyWidth) +
+               prog_->inst_count(kInstLBCheck) +  
                prog_->inst_count(kInstNop) + 1;  // + 1 for start inst
   stack_ = PODArray<AddState>(nstack);
   freelist_ = NULL;
@@ -617,7 +619,7 @@ bool NFA::Search(absl::string_view text, absl::string_view context,
       // Try to use prefix accel (e.g. memchr) to skip ahead.
       // The search must be unanchored and there must be zero
       // possible matches already.
-      if (!anchored && runq->size() == 0 &&
+      if (!prog_->has_lookbehind() && !anchored && runq->size() == 0 &&
           p < etext_ && prog_->can_prefix_accel()) {
         p = reinterpret_cast<const char*>(prog_->PrefixAccel(p, etext_ - p));
         if (p == NULL)

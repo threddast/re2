@@ -92,6 +92,7 @@ class Prog {
 
     // Getters
     int id(Prog* p) { return static_cast<int>(this - p->inst_.data()); }
+
     InstOp opcode() { return static_cast<InstOp>(out_opcode_ & 15); }
     int last() { return (out_opcode_ >> 4) & 1; }
     int out() { return out_opcode_ >> 5; }
@@ -104,7 +105,7 @@ class Prog {
       return cap_;
     }
     int lb() { 
-      ABSL_DCHECK_EQ(opcode(), kInstLBCheck); 
+      ABSL_DCHECK(opcode() == kInstLBWrite || opcode() == kInstLBCheck); 
       return lb_; 
     }
     int lo() {

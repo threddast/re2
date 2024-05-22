@@ -12,11 +12,24 @@ using namespace re2;
 // adapted from https://stackoverflow.com/questions/25889065/how-to-use-re2-library-when-match-arguments-are-unknown
 
 int main(int argc, char* argv[]) {
-    string regex = "(?<=test)";
-    string text = "test";
+    string regex = "the(?<=el(?<=e.*).*)";
+    string text = "hellothere";
     if (argc == 3) {
         regex = string(argv[1]);
         text = argv[2];
+    }
+
+    if(RE2::FullMatch(text, regex)) {  // there is a bug in the NFA, it always returns full match even when it is not
+        printf("Full match!\n");
+    } else {
+        printf("No full match\n");
+    }
+    
+    if(RE2::PartialMatch(text, regex)) {
+        printf("Partial match!\n");
+        return 0;
+    } else {
+        printf("No partial match\n");
     }
 
     // parse regex

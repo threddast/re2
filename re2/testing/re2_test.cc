@@ -609,6 +609,12 @@ TEST(RE2, FullMatchWithNoArgs) {
   ASSERT_FALSE(RE2::FullMatch("hello!", "h.*o"));   // Must be anchored at end
 }
 
+TEST(RE2, LookBehindTest) {
+  ASSERT_TRUE(RE2::PartialMatch("hello there", "there(?<=hello.*)"));
+  ASSERT_TRUE(RE2::PartialMatch("hello there", "there(?<=hello.*)"));
+
+}
+
 TEST(RE2, PartialMatch) {
   ASSERT_TRUE(RE2::PartialMatch("x", "x"));
   ASSERT_TRUE(RE2::PartialMatch("hello", "h.*o"));
