@@ -657,18 +657,8 @@ void Prog::Flatten() {
     inst_count_[ip->opcode()]++;
     if (ip->opcode() == kInstLBCheck) {
       lb_add_start(flatmap[ip->out1()]);
-      // lb_add_start(id+1); // kinda ugly, but basically the nop is always after the checkLB
     }
   }
-
-  // Fifth pass: add lookbehind starts
-  // if (has_lookbehind_) {
-  //   for (int id = 0; id < static_cast<int>(flat.size()); id++) {
-  //     Inst* ip = &flat[id];
-  //     if (ip->opcode() == kInstLBCheck)
-  //       lb_add_start(ip->out1());
-  //   }
-  // }
 
 #if !defined(NDEBUG)
   // Address a `-Wunused-but-set-variable' warning from Clang 13.x.
@@ -777,11 +767,7 @@ void Prog::MarkSuccessors(SparseArray<int>* rootmap,
         stk->push_back(ip->out1());
         id = ip->out();
 
-        // save the lb_start
-        // lb_add_start(ip->out1());
-        // printf("lb_start_marksucc: %d\n", ip->out1());
         goto Loop;
-
 
       case kInstNop:
         id = ip->out();
@@ -905,51 +891,18 @@ void Prog::EmitList(int root, SparseArray<int>* rootmap,
       case kInstByteRange:
       case kInstCapture:
       case kInstEmptyWidth:
-      // case kInstLBCheck:
         flat->emplace_back();
         memmove(&flat->back(), ip, sizeof *ip);
         flat->back().set_out(rootmap->get_existing(ip->out()));
         break;
 
       case kInstLBCheck:
-      // original solution
         flat->emplace_back();
         memmove(&flat->back(), ip, sizeof *ip);
         flat->back().set_out(rootmap->get_existing(ip->out()));
         flat->back().out1_ = rootmap->get_existing(ip->out1());
         break;
 
-      // new solution 2
-        flat->emplace_back();
-        memmove(&flat->back(), ip, sizeof *ip);
-        flat->back().set_out(rootmap->get_existing(ip->out()));
-        flat->back().set_out1(rootmap->get_existing(ip->out1()));
-        // stk->push_back(ip->out1());
-        // id = ip->out1();
-        // goto Loop;
-        break;
-
-      // new solution
-        flat->emplace_back();
-        memmove(&flat->back(), ip, sizeof *ip);
-        flat->back().set_out(rootmap->get_existing(ip->out())); // checklb points to normal tree
-        // int out1_id = rootmap->get_existing(ip->out1());
-        flat->back().set_out1(static_cast<int>(flat->size())); // set out1 to the nop
-
-              
-        flat->emplace_back();
-        flat->back().set_opcode(kInstNop); // this adds a nop at the start
-        flat->back().set_out(rootmap->get_existing(ip->out1()));
-        // flat->at(flat->size() - 2).out1_ = 1;
-        break;
-
-        stk->push_back(ip->out1());
-        id = ip->out1();
-        goto Loop;
-        break;
-
-      // case kInstLBCheck:
-        // printf("hello\n");
       case kInstNop:
         id = ip->out();
         goto Loop;

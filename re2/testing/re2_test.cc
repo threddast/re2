@@ -610,9 +610,8 @@ TEST(RE2, FullMatchWithNoArgs) {
 }
 
 TEST(RE2, LookBehindTest) {
-  ASSERT_TRUE(RE2::PartialMatch("hello there", "there(?<=hello.*)"));
-  ASSERT_TRUE(RE2::PartialMatch("hello there", "there(?<=hello.*)"));
-
+  ASSERT_TRUE(RE2::FullMatch("hello there", ".*there(?<=hello.*)"));
+  ASSERT_TRUE(RE2::PartialMatch("hello there", "(?<= )there"));
 }
 
 TEST(RE2, PartialMatch) {

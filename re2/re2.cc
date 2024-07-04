@@ -275,7 +275,7 @@ void RE2::Init(absl::string_view pattern, const Options& options) {
   // machine's memory gets cut from the DFA memory budget,
   // and that is harder to do if the DFA has already
   // been built.
-  // is_one_pass_ = prog_->IsOnePass();
+  is_one_pass_ = prog_->IsOnePass();
 }
 
 // Returns rprog_, computing it if needed.
@@ -731,7 +731,7 @@ bool RE2::Match(absl::string_view text,
       longest_match_ ? Prog::kLongestMatch : Prog::kFirstMatch;
 
   bool can_one_pass = is_one_pass_ && ncap <= Prog::kMaxOnePassCapture;
-  bool can_bit_state = prog_->CanBitState();
+  bool can_bit_state = prog_->CanBitState() && !prog_->has_lookbehind();
   bool has_lookbehind = prog_->has_lookbehind();
   size_t bit_state_text_max_size = prog_->bit_state_text_max_size();
 
@@ -740,20 +740,6 @@ bool RE2::Match(absl::string_view text,
 #endif
   bool dfa_failed = false;
   bool skipped_test = false;
-
-  // if a lookaround, directly use NFA and exit
-  // if (prog_->has_lookbehind()) {
-  // // if (true) {
-  //   can_bit_state = false;
-  //   can_one_pass = false;
-  //   goto nfa; // also skips building the reverse prog
-
-  //   // could transform this into "has lookaround"
-  //   // then run the NFA once for prog_ then for reverse prog
-  //   // both prog and reverse prog save a lookaround oracle with where the lookaround holds
-  //   // then run the NFA once more with the normal regex and the oracle
-  // }
-  
   switch (re_anchor) {
     default:
       ABSL_LOG(DFATAL) << "Unexpected re_anchor value: " << re_anchor;
@@ -762,7 +748,6 @@ bool RE2::Match(absl::string_view text,
     case UNANCHORED: {
       if (has_lookbehind) {
         can_bit_state = false;
-        can_one_pass = false;
         skipped_test = true;
         break;
       }
@@ -847,8 +832,8 @@ bool RE2::Match(absl::string_view text,
       if (re_anchor == ANCHOR_BOTH)
         kind = Prog::kFullMatch;
       anchor = Prog::kAnchored;
+
       if (has_lookbehind) {
-        can_bit_state = false;
         can_one_pass = false;
         skipped_test = true;
         break;

@@ -27,7 +27,6 @@ int main(int argc, char* argv[]) {
     
     if(RE2::PartialMatch(text, regex)) {
         printf("Partial match!\n");
-        return 0;
     } else {
         printf("No partial match\n");
     }

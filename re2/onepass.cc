@@ -1,3 +1,4 @@
+
 // Copyright 2008 The RE2 Authors.  All Rights Reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -447,6 +448,11 @@ bool Prog::IsOnePass() {
           ABSL_LOG(DFATAL) << "unhandled opcode: " << ip->opcode();
           break;
 
+        case kInstLBWrite:
+        case kInstLBCheck:
+          // Not onepass
+          goto fail;
+          
         case kInstAltMatch:
           // TODO(rsc): Ignoring kInstAltMatch optimization.
           // Should implement it in this engine, but it's subtle.

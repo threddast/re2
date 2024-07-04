@@ -723,8 +723,8 @@ bool Regexp::ParseState::DoRightParen() {
   // The stack should be: LeftParen regexp
   // Remove the LeftParen, leaving the regexp,
   // parenthesized.
-  Regexp* r1; // @eg: top of stack
-  Regexp* r2; // @eg: second from top of stack (leftparen)
+  Regexp* r1;
+  Regexp* r2;
   if ((r1 = stacktop_) == NULL ||
       (r2 = r1->down_) == NULL ||
       r2->op() != kLeftParen) {
@@ -768,32 +768,6 @@ bool Regexp::ParseState::DoRightParen() {
     re->Decref();
     re = r1;
   }
-  // switch (re->cap_) {
-  //   case -1 : // @eg: non-capturing group, just ignore the leftparen
-  //     re->Decref();
-  //     re = r1;
-  //     break;
-  //   case -2: // positive lookbehind
-  //     re->op_ = kRegexpPLB;
-  //     re->AllocSub(1);
-  //     re->sub()[0] = FinishRegexp(r1);
-  //     re->simple_ = re->ComputeSimple();
-  //     break;
-  //   case -3: // negative lookbehind
-  //     re->op_ = kRegexpNLB;
-  //     re->AllocSub(1);
-  //     re->sub()[0] = FinishRegexp(r1);
-  //     re->simple_ = re->ComputeSimple();
-  //     break;
-  //   default: // capturing group
-  //     // Rewrite LeftParen as capture if needed.
-  //     re->op_ = kRegexpCapture;
-  //     // re->cap_ is already set
-  //     re->AllocSub(1); // @eg: allocate space for one subregex
-  //     re->sub()[0] = FinishRegexp(r1); 
-  //     re->simple_ = re->ComputeSimple(); // @eg: wether the regex is already simplified
-  //     break;
-  // }
   return PushRegexp(re);
 }
 

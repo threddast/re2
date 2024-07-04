@@ -37,8 +37,8 @@ enum InstOp {
   kInstMatch,        // found a match!
   kInstNop,          // no-op; occasionally unavoidable
   kInstFail,         // never match; occasionally unavoidable
-  kInstLBWrite,          // write to lookbehind buffer
-  kInstLBCheck,          // read from lookbehind buffer
+  kInstLBWrite,      // write to lookbehind buffer
+  kInstLBCheck,      // read from lookbehind buffer
   kNumInst,
 };
 
@@ -92,7 +92,6 @@ class Prog {
 
     // Getters
     int id(Prog* p) { return static_cast<int>(this - p->inst_.data()); }
-
     InstOp opcode() { return static_cast<InstOp>(out_opcode_ & 15); }
     int last() { return (out_opcode_ >> 4) & 1; }
     int out() { return out_opcode_ >> 5; }
@@ -175,7 +174,7 @@ class Prog {
       out_opcode_ = (out<<5) | (last()<<4) | opcode;
     }
 
-    int32_t lb_;         // opcode == kInstLBCheck or kInstLBWrite
+    int32_t lb_;           // opcode == kInstLBCheck or kInstLBWrite
     uint32_t out_opcode_;  // 28 bits: out, 1 bit: last, 3 (low) bits: opcode
     union {                // additional instruction arguments:
       uint32_t out1_;      // opcode == kInstAlt
