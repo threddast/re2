@@ -732,6 +732,7 @@ bool RE2::Match(absl::string_view text,
 
   bool can_one_pass = is_one_pass_ && ncap <= Prog::kMaxOnePassCapture;
   bool can_bit_state = prog_->CanBitState();
+  bool has_lookbehind = prog_->has_lookbehind();
   size_t bit_state_text_max_size = prog_->bit_state_text_max_size();
 
 #ifdef RE2_HAVE_THREAD_LOCAL
@@ -741,17 +742,17 @@ bool RE2::Match(absl::string_view text,
   bool skipped_test = false;
 
   // if a lookaround, directly use NFA and exit
-  if (prog_->has_lookbehind()) {
-  // if (true) {
-    can_bit_state = false;
-    can_one_pass = false;
-    goto nfa; // also skips building the reverse prog
+  // if (prog_->has_lookbehind()) {
+  // // if (true) {
+  //   can_bit_state = false;
+  //   can_one_pass = false;
+  //   goto nfa; // also skips building the reverse prog
 
-    // could transform this into "has lookaround"
-    // then run the NFA once for prog_ then for reverse prog
-    // both prog and reverse prog save a lookaround oracle with where the lookaround holds
-    // then run the NFA once more with the normal regex and the oracle
-  }
+  //   // could transform this into "has lookaround"
+  //   // then run the NFA once for prog_ then for reverse prog
+  //   // both prog and reverse prog save a lookaround oracle with where the lookaround holds
+  //   // then run the NFA once more with the normal regex and the oracle
+  // }
   
   switch (re_anchor) {
     default:
@@ -759,6 +760,12 @@ bool RE2::Match(absl::string_view text,
       return false;
 
     case UNANCHORED: {
+      if (has_lookbehind) {
+        can_bit_state = false;
+        can_one_pass = false;
+        skipped_test = true;
+        break;
+      }
       if (prog_->anchor_end()) {
         // This is a very special case: we don't need the forward DFA because
         // we already know where the match must end! Instead, the reverse DFA
@@ -840,7 +847,12 @@ bool RE2::Match(absl::string_view text,
       if (re_anchor == ANCHOR_BOTH)
         kind = Prog::kFullMatch;
       anchor = Prog::kAnchored;
-
+      if (has_lookbehind) {
+        can_bit_state = false;
+        can_one_pass = false;
+        skipped_test = true;
+        break;
+      }
       // If only a small amount of text and need submatch
       // information anyway and we're going to use OnePass or BitState
       // to get it, we might as well not even bother with the DFA:
@@ -876,7 +888,6 @@ bool RE2::Match(absl::string_view text,
       break;
   }
 
-  nfa:
   skipped_test = true;
 
   if (!skipped_test && ncap <= 1) {

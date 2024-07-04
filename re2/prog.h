@@ -97,7 +97,7 @@ class Prog {
     int last() { return (out_opcode_ >> 4) & 1; }
     int out() { return out_opcode_ >> 5; }
     int out1() {
-      ABSL_DCHECK(opcode() == kInstAlt || opcode() == kInstAltMatch);
+      ABSL_DCHECK(opcode() == kInstAlt || opcode() == kInstAltMatch || opcode() == kInstLBCheck);
       return out1_;
     }
     int cap() {
